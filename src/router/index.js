@@ -3,6 +3,7 @@ import Especialidad from '@/views/EspecialidadesCrud.vue'
 import Usuario from '@/views/UsuariosCrud.vue'
 import Medico from '@/views/MedicoCrud.vue'
 import Paciente from '@/views/PacientesCrud.vue'
+import Citas from '@/views/CitasCrud.vue'
 
 const routes = [
 
@@ -25,6 +26,11 @@ const routes = [
     path: '/paciente',
     name: 'paciente',
     component: Paciente
+  },
+  {
+    path: '/citas',
+    name: 'citas',
+    component: Citas
   },
 ]
 

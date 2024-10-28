@@ -55,7 +55,7 @@
             <v-data-table :headers="headers" :items="filtrarMedicos" item-key="id" class="elevation-1" dense>
                 <template v-slot:[`item.actions`]="{ item }">
                     <v-btn icon @click="editarMedico(item)">
-                        <v-icon color="green">mdi-pencil</v-icon>
+                        <v-icon color="warning">mdi-pencil</v-icon>
                     </v-btn>
                     <v-btn icon @click="eliminarMedico(item)">
                         <v-icon color="red">mdi-delete</v-icon>

@@ -120,7 +120,7 @@ export default {
         menuItems: [
             { title: 'Gestión de Médicos', icon: 'mdi-view-dashboard', to: '/medico' },
             { title: 'Gestión de Pacientes', icon: 'mdi-account-multiple', to: '/paciente' },
-            { title: 'Gestión de Citas', icon: 'mdi-calendar-clock', to: '/appointments' },
+            { title: 'Gestión de Citas', icon: 'mdi-calendar-clock', to: '/citas' },
             { title: 'Expedientes', icon: 'mdi-file-document', to: '/records' },
             { title: 'Recetas', icon: 'mdi-pill', to: '/pharmacy' },
             { title: 'Historial', icon: 'mdi-chart-bar', to: '/analytics' },
