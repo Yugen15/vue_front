@@ -264,7 +264,7 @@ export default {
                 const fechaCita = new Date(formData.value.date);
                 const citasEnDia = citasDelDia(fechaCita.getDate(), true);
 
-                // Verificar límite de citas solo para nuevas citas
+                // Verificar límite de citas solo para nuevas citas, borrar modal de crear anterior
                 if (!modoEdicion.value && citasEnDia.length >= LIMITE_CITAS_POR_DIA) {
                     Swal.fire({
                         title: 'Lo sentimos',
