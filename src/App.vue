@@ -121,9 +121,7 @@ export default {
             { title: 'Gestión de Médicos', icon: 'mdi-view-dashboard', to: '/medico' },
             { title: 'Gestión de Pacientes', icon: 'mdi-account-multiple', to: '/paciente' },
             { title: 'Gestión de Citas', icon: 'mdi-calendar-clock', to: '/citas' },
-            { title: 'Expedientes', icon: 'mdi-file-document', to: '/records' },
-            { title: 'Recetas', icon: 'mdi-pill', to: '/pharmacy' },
-            { title: 'Historial', icon: 'mdi-chart-bar', to: '/analytics' },
+            { title: 'Consultas', icon: 'mdi-file-document', to: '/consultas' },
             { title: 'Gestión de Usuarios', icon: 'mdi-account-cog', to: '/usuario' },
         ],
         userOptions: [

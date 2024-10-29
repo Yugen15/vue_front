@@ -4,6 +4,7 @@ import Usuario from '@/views/UsuariosCrud.vue'
 import Medico from '@/views/MedicoCrud.vue'
 import Paciente from '@/views/PacientesCrud.vue'
 import Citas from '@/views/CitasCrud.vue'
+import Consultas from '@/views/ConsultasCrud.vue'
 
 const routes = [
 
@@ -31,6 +32,11 @@ const routes = [
     path: '/citas',
     name: 'citas',
     component: Citas
+  },
+  {
+    path: '/consultas',
+    name: 'cconsulta',
+    component: Consultas
   },
 ]
 
