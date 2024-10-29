@@ -37,7 +37,8 @@
                                         <div class="text-subtitle-2 font-weight-bold">
                                             {{ new Date(cita.date).toLocaleTimeString('es-ES', {
                                                 hour: '2-digit',
-                                            minute:'2-digit'}) }}
+                                                minute: '2-digit'
+                                            }) }}
                                         </div>
                                         <div class="text-body-2">{{ cita.title }}</div>
                                         <div class="text-caption">
@@ -51,6 +52,7 @@
                 </div>
             </v-col>
         </v-row>
+
         <v-dialog v-model="mostrarModal" max-width="600px" persistent>
             <v-card>
                 <v-card-title>
@@ -73,15 +75,43 @@
                                 </v-col>
 
                                 <v-col cols="12">
-                                    <v-select v-model="formData.paciente_id" :items="pacientes" item-title="nombre"
-                                        item-value="id" label="Paciente" required variant="outlined" :loading="loading"
-                                        :disabled="loading" density="comfortable"></v-select>
+                                    <v-autocomplete v-model="formData.paciente_id" :items="pacientes"
+                                        :item-title="item => `${item.nombre} ${item.apellido} - DUI: ${item.dui}`"
+                                        item-value="id" label="Buscar Paciente" persistent-hint
+                                        hint="Busque por nombre o DUI" required variant="outlined" :loading="loading"
+                                        :disabled="loading" density="comfortable" clearable
+                                        @update:search="filterPacientes">
+                                        <template v-slot:item="{ props, item }">
+                                            <v-list-item v-bind="props">
+                                                <v-list-item-title>
+                                                    {{ item.raw.nombre }} {{ item.raw.apellido }}
+                                                </v-list-item-title>
+                                                <v-list-item-subtitle>
+                                                    DUI: {{ item.raw.dui }}
+                                                </v-list-item-subtitle>
+                                            </v-list-item>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
 
                                 <v-col cols="12">
-                                    <v-select v-model="formData.doctor_id" :items="doctores" item-title="nombre"
-                                        item-value="id" label="Médico" required variant="outlined" :loading="loading"
-                                        :disabled="loading" density="comfortable"></v-select>
+                                    <v-autocomplete v-model="formData.doctor_id" :items="doctores"
+                                        :item-title="item => `Dr(a). ${item.nombre} ${item.apellido} - ${item.especialidad || 'Sin especialidad'}`"
+                                        item-value="id" label="Buscar Médico" persistent-hint
+                                        hint="Busque por nombre o especialidad" required variant="outlined"
+                                        :loading="loading" :disabled="loading" density="comfortable" clearable
+                                        @update:search="filterDoctores">
+                                        <template v-slot:item="{ props, item }">
+                                            <v-list-item v-bind="props">
+                                                <v-list-item-title>
+                                                    Dr(a). {{ item.raw.nombre }} {{ item.raw.apellido }}
+                                                </v-list-item-title>
+                                                <v-list-item-subtitle>
+                                                    {{ item.raw.especialidad || 'Sin especialidad' }}
+                                                </v-list-item-subtitle>
+                                            </v-list-item>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
 
                                 <v-col cols="12">
@@ -124,6 +154,7 @@ export default {
         const apiUrl = store.state.apiUrl;
         const LIMITE_CITAS_POR_DIA = 2;
 
+        // Referencias reactivas básicas
         const citas = ref([]);
         const pacientes = ref([]);
         const doctores = ref([]);
@@ -132,6 +163,8 @@ export default {
         const citaIdEdicion = ref(null);
         const form = ref(null);
         const loading = ref(false);
+        const searchText = ref('');
+        const doctorSearchText = ref('');
 
         const mesActual = ref(new Date().getMonth());
         const anioActual = ref(new Date().getFullYear());
@@ -153,6 +186,7 @@ export default {
             doctor_id: ''
         });
 
+        // Computed properties
         const nombreMesActual = computed(() => {
             return new Date(anioActual.value, mesActual.value).toLocaleString('es-ES', {
                 month: 'long',
@@ -165,7 +199,6 @@ export default {
             const ultimoDia = new Date(anioActual.value, mesActual.value + 1, 0);
             const resultado = [];
 
-            // Días del mes anterior
             const diasAnteriores = primerDia.getDay();
             const ultimoDiaMesAnterior = new Date(anioActual.value, mesActual.value, 0).getDate();
             for (let i = diasAnteriores - 1; i >= 0; i--) {
@@ -175,7 +208,6 @@ export default {
                 });
             }
 
-            // Días del mes actual
             for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
                 resultado.push({
                     dia,
@@ -183,7 +215,6 @@ export default {
                 });
             }
 
-            // Días del mes siguiente
             const diasSiguientes = 42 - resultado.length;
             for (let dia = 1; dia <= diasSiguientes; dia++) {
                 resultado.push({
@@ -195,30 +226,38 @@ export default {
             return resultado;
         });
 
-        const esDiaCompleto = (dia, esDeMesActual) => {
-            if (!esDeMesActual) return false;
-            const citasEnDia = citasDelDia(dia, esDeMesActual);
-            return citasEnDia.length >= LIMITE_CITAS_POR_DIA;
+        const pacientesFiltrados = computed(() => {
+            if (!searchText.value) return pacientes.value;
+
+            const searchLower = searchText.value.toLowerCase();
+            return pacientes.value.filter(paciente =>
+                paciente.nombre.toLowerCase().includes(searchLower) ||
+                paciente.apellido.toLowerCase().includes(searchLower) ||
+                paciente.dui.toLowerCase().includes(searchLower)
+            );
+        });
+
+        const doctoresFiltrados = computed(() => {
+            if (!doctorSearchText.value) return doctores.value;
+
+            const searchLower = doctorSearchText.value.toLowerCase();
+            return doctores.value.filter(doctor =>
+                doctor.nombre.toLowerCase().includes(searchLower) ||
+                doctor.apellido.toLowerCase().includes(searchLower) ||
+                (doctor.especialidad && doctor.especialidad.toLowerCase().includes(searchLower))
+            );
+        });
+
+        // Métodos de filtrado
+        const filterPacientes = (text) => {
+            searchText.value = text;
         };
 
-        const handleDiaClick = (dia, esDeMesActual) => {
-            if (!esDeMesActual) return;
-
-            if (esDiaCompleto(dia, esDeMesActual)) {
-                Swal.fire({
-                    title: 'Lo sentimos',
-                    text: 'Los cupos para este día están llenos',
-                    icon: 'info',
-                    confirmButtonText: 'Entendido'
-                });
-                return;
-            }
-
-            const fecha = new Date(anioActual.value, mesActual.value, dia);
-            formData.value.date = formatDateForInput(fecha);
-            abrirModalCrear();
+        const filterDoctores = (text) => {
+            doctorSearchText.value = text;
         };
 
+        // Métodos de API
         const obtenerCitas = async () => {
             try {
                 loading.value = true;
@@ -258,13 +297,13 @@ export default {
             }
         };
 
+        // Métodos de manejo de formulario
         const handleSubmit = async () => {
             try {
                 loading.value = true;
                 const fechaCita = new Date(formData.value.date);
                 const citasEnDia = citasDelDia(fechaCita.getDate(), true);
 
-                // Verificar límite de citas solo para nuevas citas, borrar modal de crear anterior
                 if (!modoEdicion.value && citasEnDia.length >= LIMITE_CITAS_POR_DIA) {
                     Swal.fire({
                         title: 'Lo sentimos',
@@ -295,50 +334,6 @@ export default {
             }
         };
 
-
-        const handleCrearCita = async () => {
-            try {
-                const fechaCita = new Date(formData.value.date);
-                const citasEnDia = citasDelDia(fechaCita.getDate(), true);
-
-                if (citasEnDia.length >= LIMITE_CITAS_POR_DIA) {
-                    Swal.fire({
-                        title: 'Lo sentimos',
-                        text: 'Los cupos para este día están llenos',
-                        icon: 'info',
-                        confirmButtonText: 'Entendido'
-                    });
-                    return;
-                }
-
-                const response = await axios.post(`${apiUrl}/citas/create`, formData.value);
-                if (response.data.code === 201) {
-                    await obtenerCitas();
-                    mostrarExito('Cita creada exitosamente');
-                    cerrarModal();
-                }
-            } catch (error) {
-                console.error('Error al crear cita:', error);
-                mostrarError('No se pudo crear la cita.');
-            }
-        };
-
-        const handleActualizarCita = async () => {
-            if (!citaIdEdicion.value) return;
-
-            try {
-                const response = await axios.put(`${apiUrl}/citas/update/${citaIdEdicion.value}`, formData.value);
-                if (response.data.code === 200) {
-                    await obtenerCitas();
-                    mostrarExito('Cita actualizada exitosamente');
-                    cerrarModal();
-                }
-            } catch (error) {
-                console.error('Error al actualizar cita:', error);
-                mostrarError('No se pudo actualizar la cita.');
-            }
-        };
-
         const handleEliminarCita = async () => {
             if (!citaIdEdicion.value) return;
 
@@ -364,6 +359,31 @@ export default {
                 console.error('Error al eliminar cita:', error);
                 mostrarError('No se pudo eliminar la cita.');
             }
+        };
+
+        // Métodos de utilidad
+        const esDiaCompleto = (dia, esDeMesActual) => {
+            if (!esDeMesActual) return false;
+            const citasEnDia = citasDelDia(dia, esDeMesActual);
+            return citasEnDia.length >= LIMITE_CITAS_POR_DIA;
+        };
+
+        const handleDiaClick = (dia, esDeMesActual) => {
+            if (!esDeMesActual) return;
+
+            if (esDiaCompleto(dia, esDeMesActual)) {
+                Swal.fire({
+                    title: 'Lo sentimos',
+                    text: 'Los cupos para este día están llenos',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            const fecha = new Date(anioActual.value, mesActual.value, dia);
+            formData.value.date = formatDateForInput(fecha);
+            abrirModalCrear();
         };
 
         const abrirModalCrear = () => {
@@ -431,7 +451,7 @@ export default {
 
         const getPacienteName = (pacienteId) => {
             const paciente = pacientes.value.find(p => p.id === pacienteId);
-            return paciente ? paciente.nombre : '';
+            return paciente ? `${paciente.nombre} ${paciente.apellido}` : '';
         };
 
         const cambiarMes = (direccion) => {
@@ -458,6 +478,7 @@ export default {
             });
         };
 
+        // Hooks del ciclo de vida
         onMounted(() => {
             obtenerCitas();
             obtenerPacientes();
@@ -468,10 +489,12 @@ export default {
             console.log('Citas actualizadas:', nuevoValor);
         });
 
+        // Retorno de la composición
         return {
+            // Estado
             citas,
-            pacientes,
-            doctores,
+            pacientes: pacientesFiltrados,
+            doctores: doctoresFiltrados,
             formData,
             mostrarModal,
             modoEdicion,
@@ -481,10 +504,10 @@ export default {
             nombreMesActual,
             diasCalendario,
             form,
+
+            // Métodos
             handleSubmit,
             handleEliminarCita,
-            handleActualizarCita,
-            handleCrearCita,
             abrirModalCrear,
             abrirModalEditar,
             cerrarModal,
@@ -493,7 +516,9 @@ export default {
             getPacienteName,
             cambiarMes,
             esDiaCompleto,
-            handleDiaClick
+            handleDiaClick,
+            filterPacientes,
+            filterDoctores
         };
     }
 };
