@@ -6,12 +6,7 @@
     <div class="filters">
       <div class="filter-group">
         <label for="estado">Estado:</label>
-        <select 
-          id="estado"
-          v-model="filtroEstado" 
-          @change="fetchConsultas"
-          class="filter-control"
-        >
+        <select id="estado" v-model="filtroEstado" @change="fetchConsultas" class="filter-control">
           <option value="">Todos</option>
           <option value="Pendiente">Pendiente</option>
           <option value="Completada">Completada</option>
@@ -22,25 +17,13 @@
 
       <div class="filter-group">
         <label for="fecha">Fecha:</label>
-        <input 
-          id="fecha"
-          type="date" 
-          v-model="filtroFecha" 
-          @change="fetchConsultas" 
-          class="filter-control"
-        />
+        <input id="fecha" type="date" v-model="filtroFecha" @change="fetchConsultas" class="filter-control" />
       </div>
 
       <div class="filter-group">
         <label for="busqueda">Buscar:</label>
-        <input 
-          id="busqueda"
-          type="text" 
-          v-model="filtroBusqueda" 
-          @input="fetchConsultas"
-          placeholder="Buscar por nombre o dui" 
-          class="filter-control"
-        />
+        <input id="busqueda" type="text" v-model="filtroBusqueda" @input="fetchConsultas"
+          placeholder="Buscar por nombre o dui" class="filter-control" />
       </div>
     </div>
 
@@ -108,13 +91,8 @@
             </div>
             <div class="form-group">
               <label for="diagnostico">Diagnóstico:</label>
-              <textarea 
-                id="diagnostico" 
-                v-model="editedConsulta.diagnostico" 
-                class="form-control"
-                rows="4"
-                placeholder="Ingrese el diagnóstico..."
-              ></textarea>
+              <textarea id="diagnostico" v-model="editedConsulta.diagnostico" class="form-control" rows="4"
+                placeholder="Ingrese el diagnóstico..."></textarea>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
@@ -129,12 +107,78 @@
     <div class="modal-overlay" v-if="showRecetasModal" @click.self="closeRecetasModal">
       <div class="modal-container">
         <div class="modal-header">
-          <h2 class="modal-title">Recetas para {{ editedConsulta?.paciente_nombre }}</h2>
+          <h2 class="modal-title">Recetas para {{ selectedConsulta?.paciente_nombre }}</h2>
           <button class="modal-close" @click="closeRecetasModal" title="Cerrar">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="placeholder-content">
-            Contenido de recetas aquí...
+          <!-- Información de la consulta -->
+          <div class="consulta-info">
+            <div class="info-group">
+              <label>Paciente:</label>
+              <span>{{ selectedConsulta?.paciente_nombre }}</span>
+            </div>
+            <div class="info-group">
+              <label>DUI:</label>
+              <span>{{ selectedConsulta?.paciente_dui }}</span>
+            </div>
+            <div class="info-group">
+              <label>Médico:</label>
+              <span>{{ selectedConsulta?.doctor_nombre }}</span>
+            </div>
+          </div>
+
+          <!-- Formulario para nueva receta -->
+          <form @submit.prevent="saveReceta" class="receta-form">
+            <h3>{{ editingReceta ? 'Editar Receta' : 'Nueva Receta' }}</h3>
+            <div class="form-group">
+              <label for="medicamento">Medicamento:</label>
+              <input id="medicamento" v-model="recetaForm.medicamento" type="text" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="dosis">Dosis:</label>
+              <textarea id="dosis" v-model="recetaForm.dosis" class="form-control" required></textarea>
+            </div>
+            <div class="form-buttons">
+              <button type="button" class="btn btn-secondary" @click="resetForm">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                {{ editingReceta ? 'Actualizar' : 'Agregar' }} Receta
+              </button>
+            </div>
+          </form>
+
+          <!-- Lista de recetas -->
+          <div class="recetas-list">
+            <h3>Recetas Existentes</h3>
+            <div v-if="recetas.length === 0" class="no-recetas">
+              No hay recetas registradas para esta consulta.
+            </div>
+            <div v-else class="recetas-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Medicamento</th>
+                    <th>Dosis</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="receta in recetas" :key="receta.id">
+                    <td>{{ receta.medicamento }}</td>
+                    <td>{{ receta.dosis }}</td>
+                    <td class="actions">
+                      <button class="btn-icon" @click="editReceta(receta)" title="Editar">
+                        <v-icon small color="warning">mdi-pencil</v-icon>
+                      </button>
+                      <button class="btn-icon" @click="deleteReceta(receta.id)" title="Eliminar">
+                        <v-icon small color="error">mdi-delete</v-icon>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -155,7 +199,10 @@
       </div>
     </div>
   </div>
+
 </template>
+
+
 
 <script>
 import axios from 'axios';
@@ -172,23 +219,31 @@ export default {
       showModal: false,
       showRecetasModal: false,
       showExamenesModal: false,
-      editedConsulta: null
+      editedConsulta: null,
+      recetas: [],
+      recetaForm: {
+        medicamento: '',
+        dosis: '',
+        id_consulta: null
+      },
+      editingReceta: null,
+      selectedConsulta: null
     };
   },
   computed: {
     consultasVisibles() {
-    return this.consultas.filter(consulta => {
-      const matchesEstado = this.filtroEstado ? consulta.estado === this.filtroEstado : true;
-      const matchesFecha = this.filtroFecha ? consulta.fecha === this.filtroFecha : true;
-      const matchesBusqueda = this.filtroBusqueda ? 
-        consulta.paciente_nombre.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) || 
-        (consulta.diagnostico && consulta.diagnostico.toLowerCase().includes(this.filtroBusqueda.toLowerCase())) 
-        : true;
+      return this.consultas.filter(consulta => {
+        const matchesEstado = this.filtroEstado ? consulta.estado === this.filtroEstado : true;
+        const matchesFecha = this.filtroFecha ? consulta.fecha === this.filtroFecha : true;
+        const matchesBusqueda = this.filtroBusqueda ?
+          consulta.paciente_nombre.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) ||
+          (consulta.diagnostico && consulta.diagnostico.toLowerCase().includes(this.filtroBusqueda.toLowerCase()))
+          : true;
 
-      return matchesEstado && matchesFecha && matchesBusqueda;
-    });
-  }
-},
+        return matchesEstado && matchesFecha && matchesBusqueda;
+      });
+    }
+  },
 
   mounted() {
     this.fetchConsultas();
@@ -269,7 +324,8 @@ export default {
       this.editedConsulta = null;
     },
     openRecetasModal(consulta) {
-      this.editedConsulta = { ...consulta };
+      this.selectedConsulta = { ...consulta };
+      this.fetchRecetas(consulta.consulta_id); // Cargar las recetas al abrir el modal
       this.showRecetasModal = true;
     },
     closeRecetasModal() {
@@ -295,7 +351,131 @@ export default {
         icon: 'error',
         confirmButtonColor: '#3b82f6'
       });
-    }
+    },
+
+
+    async fetchRecetas(consultaId) {
+      try {
+        const response = await axios.get(`http://localhost:8000/api/consultas/${consultaId}/recetas`);
+        this.recetas = response.data.data; // Acceder a data.data ya que la API devuelve {message, data}
+      } catch (error) {
+        console.error('Error al cargar las recetas:', error);
+        this.showErrorAlert('Error al cargar las recetas');
+      }
+    },
+
+    async saveReceta() {
+      try {
+        if (!this.selectedConsulta?.consulta_id) {
+          throw new Error('No hay consulta seleccionada');
+        }
+
+        const recetaData = {
+          medicamento: this.recetaForm.medicamento,
+          dosis: this.recetaForm.dosis,
+          id_consulta: this.selectedConsulta.consulta_id
+        };
+
+        // Validación básica en el frontend
+        if (!recetaData.medicamento || !recetaData.dosis) {
+          throw new Error('Por favor complete todos los campos');
+        }
+
+        let response;
+        if (this.editingReceta) {
+          response = await axios.put(
+            `http://localhost:8000/api/recetas/${this.editingReceta.id}`,
+            recetaData
+          );
+        } else {
+          response = await axios.post('http://localhost:8000/api/recetas', recetaData);
+        }
+
+        // Verificar la respuesta
+        if (response.data && response.status >= 200 && response.status < 300) {
+          // Actualizar lista de recetas
+          await this.fetchRecetas(this.selectedConsulta.consulta_id);
+
+          // Mostrar mensaje de éxito
+          Swal.fire({
+            title: 'Éxito',
+            text: this.editingReceta ? 'Receta actualizada correctamente' : 'Receta agregada correctamente',
+            icon: 'success',
+            confirmButtonColor: '#3b82f6'
+          });
+
+          // Limpiar formulario
+          this.resetForm();
+        } else {
+          throw new Error('Error en la respuesta del servidor');
+        }
+      } catch (error) {
+        console.error('Error al guardar la receta:', error);
+        let errorMessage = 'Error al guardar la receta';
+
+        if (error.response?.data?.errors) {
+          errorMessage = Object.values(error.response.data.errors).join('\n');
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        Swal.fire({
+          title: 'Error',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonColor: '#3b82f6'
+        });
+      }
+    },
+
+    async deleteReceta(id) {
+      try {
+        const result = await Swal.fire({
+          title: '¿Estás seguro?',
+          text: 'Esta acción no se puede deshacer',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3b82f6',
+          cancelButtonColor: '#ef4444',
+          confirmButtonText: 'Sí, eliminar',
+          cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+          await axios.delete(`http://localhost:8000/api/recetas/${id}`);
+          await this.fetchRecetas(this.selectedConsulta.consulta_id);
+
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'La receta ha sido eliminada',
+            icon: 'success',
+            confirmButtonColor: '#3b82f6'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar la receta:', error);
+        this.showErrorAlert('Error al eliminar la receta');
+      }
+    },
+
+    editReceta(receta) {
+      this.editingReceta = receta;
+      this.recetaForm = {
+        medicamento: receta.medicamento,
+        dosis: receta.dosis,
+        id_consulta: this.selectedConsulta.consulta_id
+      };
+    },
+
+    resetForm() {
+      this.recetaForm = {
+        medicamento: '',
+        dosis: '',
+        id_consulta: this.selectedConsulta?.consulta_id
+      };
+      this.editingReceta = null;
+    },
+
   }
 };
 </script>
