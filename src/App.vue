@@ -1,8 +1,8 @@
 <template>
-    <v-app >
-        <v-navigation-drawer v-model="drawer" v-if="$store.getters.getUsuario" app :mini-variant="mini" class="drawer-background" :expand-on-hover="mini"
-            width="280" dark>
-            <v-list-item class="logo-container px-2" > 
+    <v-app>
+        <v-navigation-drawer v-model="drawer" v-if="$store.getters.getUsuario" app :mini-variant="mini"
+            class="drawer-background" :expand-on-hover="mini" width="280" dark>
+            <v-list-item class="logo-container px-2">
                 <v-img class="rounded-avatar">
                     <v-img src="@/assets/logo.png" alt="Medisphere Logo" />
                 </v-img>
@@ -20,7 +20,7 @@
                         </v-list-item-content>
                     </v-list-item>
 
-                    <v-list-group :value="false" color="white" prepend-icon="mdi-account-cog" >
+                    <v-list-group :value="false" color="white" prepend-icon="mdi-account-cog">
                         <v-list-item v-for="(item, i) in userOptions" :key="i" :to="item.to" link
                             class="rounded-lg ml-4">
                             <v-list-item-icon>
@@ -47,56 +47,10 @@
         </v-navigation-drawer>
 
         <v-app-bar app color="white" elevation="1" class="app-bar" v-if="$store.getters.getUsuario">
-            <v-app-bar-nav-icon @click.stop="drawer = !drawer" color="primary"></v-app-bar-nav-icon>
-            <v-toolbar-title class="text-h6 font-weight-bold primary--text d-none d-sm-flex">
-                {{ getCurrentPageTitle }}
-            </v-toolbar-title>
+            <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+            <v-toolbar-title class="app-title">Medisphere</v-toolbar-title>
             <v-spacer></v-spacer>
-            <v-btn icon color="primary" class="mr-2">
-                <v-icon>mdi-magnify</v-icon>
-            </v-btn>
-            <v-menu offset-y left transition="slide-y-transition">
-                <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" class="mr-2" v-bind="attrs" v-on="on">
-                        <v-badge dot color="error" overlap>
-                            <v-icon>mdi-bell</v-icon>
-                        </v-badge>
-                    </v-btn>
-                </template>
-                <v-list>
-                    <v-list-item v-for="(notification, index) in notifications" :key="index">
-                        <v-list-item-content>
-                            <v-list-item-title>{{ notification.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ notification.message }}</v-list-item-subtitle>
-                        </v-list-item-content>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
-            <v-menu offset-y left transition="slide-y-transition">
-                <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon v-bind="attrs" v-on="on">
-                        <v-avatar color="primary" size="32">
-                            <span class="white--text text-subtitle-2">{{ userInitials }}</span>
-                        </v-avatar>
-                    </v-btn>
-                </template>
-                <v-list>
-                    <v-list-item link to="/profile">
-                        <v-list-item-icon>
-                            <v-icon>mdi-account</v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>{{ 'Perfil' }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item link @click="logout" class="logout-item">
-                        <v-list-item-icon>
-                            <v-icon>mdi-logout</v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-content>
-                            <v-list-item-title>{{ 'Cerrar Sesión' }}</v-list-item-title>
-                        </v-list-item-content>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
+            <span class="user-welcome">Bienvenido, {{ usuarioNombre }}</span>
         </v-app-bar>
 
         <v-main class="grey lighten-4">
@@ -112,28 +66,23 @@
 
 export default {
     name: 'App',
+    computed: {
+        usuarioNombre() {
+            return this.$store.getters.getUsuario || "Usuario";
+        },
+    },
     data: () => ({
         drawer: true,
         mini: false,
         selectedItem: 0,
         menuItems: [
-            { title: 'Gestión de Médicos', icon: 'mdi-view-dashboard', to: '/medico' },
+            { title: 'Inicio', icon: 'mdi-view-dashboard', to: '/welcome' },
+            { title: 'Gestión de Médicos', icon: 'mdi-doctor', to: '/medico' },
             { title: 'Gestión de Pacientes', icon: 'mdi-account-multiple', to: '/paciente' },
             { title: 'Gestión de Citas', icon: 'mdi-calendar-clock', to: '/citas' },
             { title: 'Consultas', icon: 'mdi-file-document', to: '/consultas' },
             { title: 'Gestión de Usuarios', icon: 'mdi-account-cog', to: '/usuario' },
-        ],
-        userOptions: [
-            { title: 'Gestionar Usuarios', icon: 'mdi-account-cog', to: '/users/manage' },
-        ],
-        notifications: [
-            { title: 'Nueva cita', message: 'Tienes una nueva cita programada para hoy' },
-            { title: 'Recordatorio', message: 'Actualiza el expediente del paciente #1234' },
-        ],
-        user: {
-            firstName: 'Juan',
-            lastName: 'Pérez',
-        },
+        ]
     }),
 
     methods: {
@@ -152,7 +101,7 @@ export default {
             }
         }
     },
-    created(){
+    created() {
         this.validarAcceso();
     }
 };
@@ -224,5 +173,17 @@ export default {
     /* Cambia el tamaño según lo necesites */
     height: 125px;
     /* Cambia el tamaño según lo necesites */
+}
+
+.app-title {
+    color: #1976D2;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.user-welcome {
+    color: #757575;
+    font-size: 1.1rem;
+    margin-right: 16px;
 }
 </style>
