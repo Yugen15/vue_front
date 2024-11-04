@@ -5,9 +5,21 @@ import Medico from '@/views/MedicoCrud.vue'
 import Paciente from '@/views/PacientesCrud.vue'
 import Citas from '@/views/CitasCrud.vue'
 import Consultas from '@/views/ConsultasCrud.vue'
+import LoginView from '@/views/LoginView.vue'
+import WelcomeView from '@/views/WelcomeView.vue'
 
 const routes = [
 
+  {
+    path: '/',
+    name: 'login',
+    component: LoginView
+  },
+  {
+    path: '/welcome',
+    name: 'welcome',
+    component: WelcomeView
+},
   {
     path: '/especialidad',
     name: 'especialidad',

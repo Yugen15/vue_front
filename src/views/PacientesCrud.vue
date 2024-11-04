@@ -11,52 +11,28 @@
                 <v-form @submit.prevent="agregarPaciente" ref="form">
                     <v-row>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                v-model="paciente.nombre"
-                                label="Nombre"
-                                :rules="[rules.requerido]"
-                                outlined
-                                dense
-                                required
-                            ></v-text-field>
+                            <v-text-field v-model="paciente.nombre" label="Nombre" :rules="[rules.requerido]" outlined
+                                dense required></v-text-field>
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                v-model="paciente.apellido"
-                                label="Apellido"
-                                :rules="[rules.requerido]"
-                                outlined
-                                dense
-                                required
-                            ></v-text-field>
+                            <v-text-field v-model="paciente.apellido" label="Apellido" :rules="[rules.requerido]"
+                                outlined dense required></v-text-field>
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                v-model="paciente.dui"
-                                label="DUI"
-                                :rules="[rules.requerido, rules.dui]"
-                                outlined
-                                dense
-                                required
-                            ></v-text-field>
+                            <v-text-field v-model="paciente.dui" label="DUI" :rules="[rules.requerido, rules.dui]"
+                                outlined dense required></v-text-field>
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                v-model="paciente.fecha_nacimiento"
-                                label="Fecha de Nacimiento"
-                                type="date"
-                                :rules="[rules.requerido]"
-                                outlined
-                                dense
-                                required
-                            ></v-text-field>
+                            <v-text-field v-model="paciente.fecha_nacimiento" label="Fecha de Nacimiento" type="date"
+                                :rules="[rules.requerido]" outlined dense required></v-text-field>
                         </v-col>
                     </v-row>
 
                     <v-row>
                         <v-col cols="12" class="text-right">
                             <v-btn v-if="!paciente.id" color="success" type="submit" class="mr-2">Agregar</v-btn>
-                            <v-btn v-if="paciente.id" color="primary" @click="modificarPaciente" class="mr-2">Modificar</v-btn>
+                            <v-btn v-if="paciente.id" color="primary" @click="modificarPaciente"
+                                class="mr-2">Modificar</v-btn>
                             <v-btn v-if="paciente.id" color="error" @click="cancelarEdicion">Cancelar</v-btn>
                         </v-col>
                     </v-row>
@@ -90,6 +66,11 @@
 import axios from "axios";
 import { mapGetters } from "vuex";
 import Swal from "sweetalert2";
+import store from "@/store";
+
+const getConfig = () => ({
+    headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
+});
 
 export default {
     name: "PacientesCrud",
@@ -126,29 +107,37 @@ export default {
     methods: {
         obtenerPacientes() {
             axios
-                .get(`${this.getApiUrl}/paciente/select`)
+                .get(`${this.getApiUrl}/paciente/select`, getConfig())
                 .then((response) => {
                     if (response.data.code === 200) {
                         this.pacientes = response.data.data;
                     }
                 })
-                .catch((error) => console.log("Error al obtener pacientes: " + error));
+                .catch((error) => {
+                    console.log("Error al obtener pacientes: " + error);
+                    Swal.fire("Error", "No se pudieron cargar los pacientes", "error");
+                });
         },
 
         agregarPaciente() {
             if (this.$refs.form.validate()) {
                 axios
-                    .post(`${this.getApiUrl}/pacientes`, this.paciente)
+                    .post(`${this.getApiUrl}/pacientes`, this.paciente, getConfig())
                     .then((response) => {
                         if (response.data.code === 200) {
                             Swal.fire("Agregado", response.data.data, "success");
                             this.paciente = {};
                             this.obtenerPacientes();
+                            this.$refs.form.resetValidation();
                         }
                     })
-                    .catch((error) => console.log("Error al agregar paciente: " + error));
+                    .catch((error) => {
+                        console.log("Error al agregar paciente: " + error);
+                        Swal.fire("Error", "No se pudo agregar el paciente", "error");
+                    });
             }
         },
+
         editarPaciente(item) {
             this.paciente = { ...item };
         },
@@ -156,12 +145,17 @@ export default {
         modificarPaciente() {
             if (this.$refs.form.validate()) {
                 axios
-                    .put(`${this.getApiUrl}/paciente/update/${this.paciente.id}`, this.paciente)
+                    .put(
+                        `${this.getApiUrl}/paciente/update/${this.paciente.id}`,
+                        this.paciente,
+                        getConfig()
+                    )
                     .then((response) => {
                         if (response.data.code === 200) {
                             Swal.fire("Modificado", "Paciente modificado con éxito", "success");
                             this.paciente = {};
                             this.obtenerPacientes();
+                            this.$refs.form.resetValidation();
                         }
                     })
                     .catch((error) => {
@@ -190,7 +184,7 @@ export default {
 
         eliminarPaciente(item) {
             axios
-                .delete(`${this.getApiUrl}/paciente/delete/${item.id}`)
+                .delete(`${this.getApiUrl}/paciente/delete/${item.id}`, getConfig())
                 .then((response) => {
                     if (response.data.code === 200) {
                         Swal.fire("Eliminado", "Paciente eliminado", "success");
@@ -205,6 +199,7 @@ export default {
 
         cancelarEdicion() {
             this.paciente = {};
+            this.$refs.form.resetValidation();
         }
     },
     created() {

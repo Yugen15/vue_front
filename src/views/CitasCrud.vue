@@ -199,8 +199,12 @@ export default {
             const ultimoDia = new Date(anioActual.value, mesActual.value + 1, 0);
             const resultado = [];
 
-            const diasAnteriores = primerDia.getDay();
+            // Obtener el último día del mes anterior
             const ultimoDiaMesAnterior = new Date(anioActual.value, mesActual.value, 0).getDate();
+
+            // Corregido: Calcular días del mes anterior
+            // primerDia.getDay() devuelve 0 para domingo, por lo que necesitamos agregar los días correctamente
+            const diasAnteriores = primerDia.getDay();
             for (let i = diasAnteriores - 1; i >= 0; i--) {
                 resultado.push({
                     dia: ultimoDiaMesAnterior - i,
@@ -208,6 +212,7 @@ export default {
                 });
             }
 
+            // Agregar días del mes actual
             for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
                 resultado.push({
                     dia,
@@ -215,7 +220,8 @@ export default {
                 });
             }
 
-            const diasSiguientes = 42 - resultado.length;
+            // Agregar días del mes siguiente
+            const diasSiguientes = 42 - resultado.length; // 42 = 6 semanas * 7 días
             for (let dia = 1; dia <= diasSiguientes; dia++) {
                 resultado.push({
                     dia,
@@ -258,10 +264,16 @@ export default {
         };
 
         // Métodos de API
+
+        const getConfig = () => ({
+            headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
+        });
+
+        // Métodos de API adaptados con configuración
         const obtenerCitas = async () => {
             try {
                 loading.value = true;
-                const response = await axios.get(`${apiUrl}/citas`);
+                const response = await axios.get(`${apiUrl}/citas`, getConfig());
                 if (Array.isArray(response.data)) {
                     citas.value = response.data;
                 }
@@ -275,7 +287,7 @@ export default {
 
         const obtenerPacientes = async () => {
             try {
-                const response = await axios.get(`${apiUrl}/paciente/select`);
+                const response = await axios.get(`${apiUrl}/paciente/select`, getConfig());
                 if (response.data && response.data.code === 200) {
                     pacientes.value = response.data.data;
                 }
@@ -287,7 +299,7 @@ export default {
 
         const obtenerDoctores = async () => {
             try {
-                const response = await axios.get(`${apiUrl}/medico/select`);
+                const response = await axios.get(`${apiUrl}/medico/select`, getConfig());
                 if (response.data && response.data.code === 200) {
                     doctores.value = response.data.data;
                 }
@@ -297,7 +309,6 @@ export default {
             }
         };
 
-        // Métodos de manejo de formulario
         const handleSubmit = async () => {
             try {
                 loading.value = true;
@@ -319,7 +330,7 @@ export default {
                     : `${apiUrl}/citas/create`;
                 const method = modoEdicion.value ? 'put' : 'post';
 
-                const response = await axios[method](endpoint, formData.value);
+                const response = await axios[method](endpoint, formData.value, getConfig());
 
                 if (response.data.code === 200 || response.data.code === 201) {
                     await obtenerCitas();
@@ -350,7 +361,7 @@ export default {
                 });
 
                 if (result.isConfirmed) {
-                    await axios.delete(`${apiUrl}/citas/delete/${citaIdEdicion.value}`);
+                    await axios.delete(`${apiUrl}/citas/delete/${citaIdEdicion.value}`, getConfig());
                     await obtenerCitas();
                     mostrarExito('Cita eliminada exitosamente');
                     cerrarModal();

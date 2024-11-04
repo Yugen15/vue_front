@@ -188,25 +188,93 @@
     <div class="modal-overlay" v-if="showExamenesModal" @click.self="closeExamenesModal">
       <div class="modal-container">
         <div class="modal-header">
-          <h2 class="modal-title">Exámenes para {{ editedConsulta?.paciente_nombre }}</h2>
+          <h2 class="modal-title">Exámenes para {{ selectedConsulta?.paciente_nombre }}</h2>
           <button class="modal-close" @click="closeExamenesModal" title="Cerrar">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="placeholder-content">
-            Contenido de exámenes aquí...
+          <!-- Información de la consulta -->
+          <div class="consulta-info">
+            <div class="info-group">
+              <label>Paciente:</label>
+              <span>{{ selectedConsulta?.paciente_nombre }}</span>
+            </div>
+            <div class="info-group">
+              <label>DUI:</label>
+              <span>{{ selectedConsulta?.paciente_dui }}</span>
+            </div>
+            <div class="info-group">
+              <label>Médico:</label>
+              <span>{{ selectedConsulta?.doctor_nombre }}</span>
+            </div>
+          </div>
+
+          <!-- Formulario para nuevo examen -->
+          <form @submit.prevent="saveExamen" class="examen-form">
+            <h3>{{ editingExamen ? 'Editar Examen' : 'Nuevo Examen' }}</h3>
+            <div class="form-group">
+              <label for="tipo">Tipo de Examen:</label>
+              <input id="tipo" v-model="examenForm.tipo" type="text" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="resultado">Resultado:</label>
+              <textarea id="resultado" v-model="examenForm.resultado" class="form-control"></textarea>
+            </div>
+            <div class="form-buttons">
+              <button type="button" class="btn btn-secondary" @click="resetExamenForm">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                {{ editingExamen ? 'Actualizar' : 'Agregar' }} Examen
+              </button>
+            </div>
+          </form>
+
+          <!-- Lista de exámenes -->
+          <div class="examenes-list">
+            <h3>Exámenes Existentes</h3>
+            <div v-if="examenes.length === 0" class="no-examenes">
+              No hay exámenes registrados para esta consulta.
+            </div>
+            <div v-else class="examenes-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Resultado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="examen in examenes" :key="examen.id">
+                    <td>{{ examen.tipo }}</td>
+                    <td>{{ examen.resultado || '-' }}</td>
+                    <td class="actions">
+                      <button class="btn-icon" @click="editExamen(examen)" title="Editar">
+                        <v-icon small color="warning">mdi-pencil</v-icon>
+                      </button>
+                      <button class="btn-icon" @click="deleteExamen(examen.id)" title="Eliminar">
+                        <v-icon small color="error">mdi-delete</v-icon>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-
 </template>
-
-
 
 <script>
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2'
+import store from '@/store';
+
+const getConfig = () => ({
+  headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
+});
 
 export default {
   name: 'ConsultasView',
@@ -221,15 +289,22 @@ export default {
       showExamenesModal: false,
       editedConsulta: null,
       recetas: [],
+      examenes: [],
       recetaForm: {
         medicamento: '',
         dosis: '',
+        id_consulta: null,
+      },
+      examenForm: {
+        tipo: '',
+        resultado: '',
         id_consulta: null
       },
-      editingReceta: null,
-      selectedConsulta: null
+      editingExamen: null,
+      selectedConsulta: null,
     };
   },
+
   computed: {
     consultasVisibles() {
       return this.consultas.filter(consulta => {
@@ -249,101 +324,41 @@ export default {
     this.fetchConsultas();
   },
   methods: {
-    fetchConsultas() {
-      let url = 'http://localhost:8000/api/consulta/select';
-      let params = {};
-
-      if (this.filtroEstado) {
-        params.estado = this.filtroEstado;
-      }
-      if (this.filtroFecha) {
-        params.fecha = this.filtroFecha;
-      }
-
-      axios.get(url, { params })
-        .then(response => {
-          this.consultas = response.data;
-        })
-        .catch(error => {
-          console.error('Error al obtener las consultas:', error);
-          this.showErrorAlert('Error al cargar las consultas');
-        });
-    },
-    editConsulta(consulta) {
-      this.editedConsulta = { ...consulta };
-      this.showModal = true;
-    },
-    updateConsulta() {
-      axios.put(`http://localhost:8000/api/consultas/update/${this.editedConsulta.consulta_id}`, this.editedConsulta)
-        .then(() => {
-          this.fetchConsultas();
-          this.closeModal();
-          Swal.fire({
-            title: 'Éxito',
-            text: 'La consulta se ha actualizado correctamente.',
-            icon: 'success',
-            confirmButtonColor: '#3b82f6'
-          });
-        })
-        .catch(error => {
-          console.error('Error al actualizar la consulta:', error);
-          this.showErrorAlert('Error al actualizar la consulta');
-        });
-    },
-    deleteConsulta(id) {
-      Swal.fire({
-        title: '¿Estás seguro?',
-        text: 'Esta acción no se puede deshacer.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3b82f6',
-        cancelButtonColor: '#ef4444',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          axios.delete(`http://localhost:8000/api/consultas/delete/${id}`)
-            .then(() => {
-              this.fetchConsultas();
-              Swal.fire({
-                title: 'Eliminado',
-                text: 'La consulta se ha eliminado correctamente.',
-                icon: 'success',
-                confirmButtonColor: '#3b82f6'
-              });
-            })
-            .catch(error => {
-              console.error('Error al eliminar la consulta:', error);
-              this.showErrorAlert('Error al eliminar la consulta');
-            });
-        }
-      });
-    },
-    closeModal() {
-      this.showModal = false;
-      this.editedConsulta = null;
-    },
-    openRecetasModal(consulta) {
-      this.selectedConsulta = { ...consulta };
-      this.fetchRecetas(consulta.consulta_id); // Cargar las recetas al abrir el modal
-      this.showRecetasModal = true;
-    },
-    closeRecetasModal() {
-      this.showRecetasModal = false;
-      this.editedConsulta = null;
-    },
-    openExamenesModal(consulta) {
-      this.editedConsulta = { ...consulta };
-      this.showExamenesModal = true;
-    },
-    closeExamenesModal() {
-      this.showExamenesModal = false;
-      this.editedConsulta = null;
-    },
     formatDate(dateString) {
+      if (!dateString) return '-';
       const date = new Date(dateString);
-      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+      return new Intl.DateTimeFormat('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
     },
+
+    async fetchConsultas() {
+      try {
+        let url = 'http://localhost:8000/api/consulta/select';
+        let params = {};
+
+        if (this.filtroEstado) {
+          params.estado = this.filtroEstado;
+        }
+        if (this.filtroFecha) {
+          params.fecha = this.filtroFecha;
+        }
+
+        const response = await axios.get(url, {
+          ...getConfig(),
+          params
+        });
+        this.consultas = response.data;
+      } catch (error) {
+        console.error('Error al obtener las consultas:', error);
+        this.showErrorAlert('Error al cargar las consultas');
+      }
+    },
+
     showErrorAlert(message) {
       Swal.fire({
         title: 'Error',
@@ -353,11 +368,106 @@ export default {
       });
     },
 
+    editConsulta(consulta) {
+      this.editedConsulta = { ...consulta };
+      this.showModal = true;
+    },
 
+    closeModal() {
+      this.showModal = false;
+      this.editedConsulta = null;
+    },
+
+    closeRecetasModal() {
+      this.showRecetasModal = false;
+      this.selectedConsulta = null;
+      this.resetForm();
+    },
+
+    closeExamenesModal() {
+      this.showExamenesModal = false;
+      this.resetExamenForm();
+      this.examenes = [];
+      this.selectedConsulta = null;
+    },
+
+    openRecetasModal(consulta) {
+      this.selectedConsulta = consulta;
+      this.showRecetasModal = true;
+      this.fetchRecetas(consulta.consulta_id);
+    },
+
+    async openExamenesModal(consulta) {
+      this.selectedConsulta = consulta;
+      this.showExamenesModal = true;
+      await this.fetchExamenes(consulta.consulta_id);
+    },
+
+    async updateConsulta() {
+      try {
+        await axios.put(
+          `http://localhost:8000/api/consultas/update/${this.editedConsulta.consulta_id}`,
+          this.editedConsulta,
+          getConfig()
+        );
+
+        await this.fetchConsultas();
+        this.closeModal();
+
+        Swal.fire({
+          title: 'Éxito',
+          text: 'La consulta se ha actualizado correctamente.',
+          icon: 'success',
+          confirmButtonColor: '#3b82f6'
+        });
+      } catch (error) {
+        console.error('Error al actualizar la consulta:', error);
+        this.showErrorAlert('Error al actualizar la consulta');
+      }
+    },
+
+    async deleteConsulta(id) {
+      try {
+        const result = await Swal.fire({
+          title: '¿Estás seguro?',
+          text: 'Esta acción no se puede deshacer.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3b82f6',
+          cancelButtonColor: '#ef4444',
+          confirmButtonText: 'Sí, eliminar',
+          cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+          await axios.delete(
+            `http://localhost:8000/api/consultas/delete/${id}`,
+            getConfig()
+          );
+
+          await this.fetchConsultas();
+
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'La consulta se ha eliminado correctamente.',
+            icon: 'success',
+            confirmButtonColor: '#3b82f6'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar la consulta:', error);
+        this.showErrorAlert('Error al eliminar la consulta');
+      }
+    },
+
+    // RECETAS
     async fetchRecetas(consultaId) {
       try {
-        const response = await axios.get(`http://localhost:8000/api/consultas/${consultaId}/recetas`);
-        this.recetas = response.data.data; // Acceder a data.data ya que la API devuelve {message, data}
+        const response = await axios.get(
+          `http://localhost:8000/api/consultas/${consultaId}/recetas`,
+          getConfig()
+        );
+        this.recetas = response.data.data;
       } catch (error) {
         console.error('Error al cargar las recetas:', error);
         this.showErrorAlert('Error al cargar las recetas');
@@ -376,39 +486,34 @@ export default {
           id_consulta: this.selectedConsulta.consulta_id
         };
 
-        // Validación básica en el frontend
         if (!recetaData.medicamento || !recetaData.dosis) {
           throw new Error('Por favor complete todos los campos');
         }
 
-        let response;
         if (this.editingReceta) {
-          response = await axios.put(
+          await axios.put(
             `http://localhost:8000/api/recetas/${this.editingReceta.id}`,
-            recetaData
+            recetaData,
+            getConfig()
           );
         } else {
-          response = await axios.post('http://localhost:8000/api/recetas', recetaData);
+          await axios.post(
+            'http://localhost:8000/api/recetas',
+            recetaData,
+            getConfig()
+          );
         }
 
-        // Verificar la respuesta
-        if (response.data && response.status >= 200 && response.status < 300) {
-          // Actualizar lista de recetas
-          await this.fetchRecetas(this.selectedConsulta.consulta_id);
+        await this.fetchRecetas(this.selectedConsulta.consulta_id);
 
-          // Mostrar mensaje de éxito
-          Swal.fire({
-            title: 'Éxito',
-            text: this.editingReceta ? 'Receta actualizada correctamente' : 'Receta agregada correctamente',
-            icon: 'success',
-            confirmButtonColor: '#3b82f6'
-          });
+        Swal.fire({
+          title: 'Éxito',
+          text: this.editingReceta ? 'Receta actualizada correctamente' : 'Receta agregada correctamente',
+          icon: 'success',
+          confirmButtonColor: '#3b82f6'
+        });
 
-          // Limpiar formulario
-          this.resetForm();
-        } else {
-          throw new Error('Error en la respuesta del servidor');
-        }
+        this.resetForm();
       } catch (error) {
         console.error('Error al guardar la receta:', error);
         let errorMessage = 'Error al guardar la receta';
@@ -442,7 +547,10 @@ export default {
         });
 
         if (result.isConfirmed) {
-          await axios.delete(`http://localhost:8000/api/recetas/${id}`);
+          await axios.delete(
+            `http://localhost:8000/api/recetas/${id}`,
+            getConfig()
+          );
           await this.fetchRecetas(this.selectedConsulta.consulta_id);
 
           Swal.fire({
@@ -476,9 +584,116 @@ export default {
       this.editingReceta = null;
     },
 
+    // EXÁMENES
+    async fetchExamenes(consultaId) {
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/consultas/${consultaId}/examenes`,
+          getConfig()
+        );
+        this.examenes = response.data.data;
+      } catch (error) {
+        console.error('Error al cargar los exámenes:', error);
+        this.showErrorAlert('Error al cargar los exámenes');
+      }
+    },
+
+    async saveExamen() {
+      try {
+        if (!this.selectedConsulta?.consulta_id) {
+          throw new Error('No hay consulta seleccionada');
+        }
+
+        const examenData = {
+          tipo: this.examenForm.tipo,
+          resultado: this.examenForm.resultado,
+          id_consulta: this.selectedConsulta.consulta_id
+        };
+
+        if (this.editingExamen) {
+          await axios.put(
+            `http://localhost:8000/api/examenes/${this.editingExamen.id}`,
+            examenData,
+            getConfig()
+          );
+        } else {
+          await axios.post(
+            'http://localhost:8000/api/examenes',
+            examenData,
+            getConfig()
+          );
+        }
+
+        await this.fetchExamenes(this.selectedConsulta.consulta_id);
+
+        Swal.fire({
+          title: 'Éxito',
+          text: this.editingExamen ? 'Examen actualizado correctamente' : 'Examen agregado correctamente',
+          icon: 'success',
+          confirmButtonColor: '#3b82f6'
+        });
+
+        this.resetExamenForm();
+      } catch (error) {
+        console.error('Error al guardar el examen:', error);
+        this.showErrorAlert('Error al guardar el examen');
+      }
+    },
+
+    editExamen(examen) {
+      this.editingExamen = examen;
+      this.examenForm = {
+        tipo: examen.tipo,
+        resultado: examen.resultado,
+        id_consulta: this.selectedConsulta.consulta_id
+      };
+    },
+
+    async deleteExamen(id) {
+      try {
+        const result = await Swal.fire({
+          title: '¿Estás seguro?',
+          text: 'Esta acción no se puede deshacer',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3b82f6',
+          cancelButtonColor: '#ef4444',
+          confirmButtonText: 'Sí, eliminar',
+          cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+          await axios.delete(
+            `http://localhost:8000/api/examenes/${id}`,
+            getConfig()
+          );
+          await this.fetchExamenes(this.selectedConsulta.consulta_id);
+
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'El examen ha sido eliminado',
+            icon: 'success',
+            confirmButtonColor: '#3b82f6'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar el examen:', error);
+        this.showErrorAlert('Error al eliminar el examen');
+      }
+    },
+
+    resetExamenForm() {
+      this.examenForm = {
+        tipo: '',
+        resultado: '',
+        id_consulta: this.selectedConsulta?.consulta_id
+      };
+      this.editingExamen = null;
+    }
   }
-};
+}; 
 </script>
+
 
 <style scoped>
 .consultas-container {
@@ -731,5 +946,65 @@ export default {
   color: #6b7280;
   text-align: center;
   padding: 1rem 0;
+}
+
+.examenes-list {
+  margin-top: 2rem;
+}
+
+.examenes-table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.examenes-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.examenes-table th,
+.examenes-table td {
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.examenes-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.no-examenes {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+  background-color: #f9fafb;
+  border-radius: 6px;
+}
+
+.examen-form {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+}
+
+.form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn-icon {
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+  opacity: 0.7;
 }
 </style>

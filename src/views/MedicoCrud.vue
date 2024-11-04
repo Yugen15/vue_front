@@ -61,21 +61,26 @@
                         <v-icon color="red">mdi-delete</v-icon>
                     </v-btn>
                 </template>
-</v-data-table>
-</v-card>
-</v-container>
+            </v-data-table>
+        </v-card>
+    </v-container>
 
-<!-- Alerta para mostrar mensajes -->
-<v-snackbar v-model="alertaEstado" color="blue-accent-1" timeout="2000">
-    {{ mensaje }}
-</v-snackbar>
+    <!-- Alerta para mostrar mensajes -->
+    <v-snackbar v-model="alertaEstado" color="blue-accent-1" timeout="2000">
+        {{ mensaje }}
+    </v-snackbar>
 </template>
 
 
 <script>
 import axios from "axios";
 import { mapGetters } from "vuex";
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2'
+import store from "@/store"
+
+const getConfig = () => ({
+    headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
+});
 
 export default {
     name: "MedicoView",
@@ -107,10 +112,11 @@ export default {
             });
         }
     },
+
     methods: {
         obtenerEspecialidades() {
             axios
-                .get(`${this.getApiUrl}/especialidad/select`)
+                .get(`${this.getApiUrl}/especialidad/select`, getConfig())
                 .then((response) => {
                     if (response.data.code === 200) {
                         this.especialidades = response.data.data;
@@ -128,7 +134,7 @@ export default {
 
         async agregarMedico() {
             try {
-                const response = await axios.post(`${this.getApiUrl}/medico/store`, this.medico);
+                const response = await axios.post(`${this.getApiUrl}/medico/store`, this.medico, getConfig());
                 if (response.data.code === 200) {
                     await Swal.fire({
                         icon: 'success',
@@ -164,7 +170,11 @@ export default {
                 });
 
                 if (result.isConfirmed) {
-                    const response = await axios.put(`${this.getApiUrl}/medico/update/${this.medico.id}`, this.medico);
+                    const response = await axios.put(
+                        `${this.getApiUrl}/medico/update/${this.medico.id}`,
+                        this.medico,
+                        getConfig()
+                    );
                     if (response.data.code === 200) {
                         await Swal.fire({
                             icon: 'success',
@@ -189,7 +199,7 @@ export default {
 
         obtenerMedicos() {
             axios
-                .get(`${this.getApiUrl}/medico/select`)
+                .get(`${this.getApiUrl}/medico/select`, getConfig())
                 .then((response) => {
                     if (response.data.code === 200) {
                         this.medicos = response.data.data;
@@ -207,7 +217,7 @@ export default {
 
         verMedico(item) {
             axios
-                .get(`${this.getApiUrl}/medico/find/${item.id}`)
+                .get(`${this.getApiUrl}/medico/find/${item.id}`, getConfig())
                 .then((response) => {
                     if (response.data.code === 200) {
                         this.medico = response.data.data;
@@ -241,7 +251,10 @@ export default {
                 });
 
                 if (result.isConfirmed) {
-                    const response = await axios.delete(`${this.getApiUrl}/medico/delete/${item.id}`);
+                    const response = await axios.delete(
+                        `${this.getApiUrl}/medico/delete/${item.id}`,
+                        getConfig()
+                    );
                     if (response.data.code === 200) {
                         await Swal.fire({
                             icon: 'success',

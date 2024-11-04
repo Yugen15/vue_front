@@ -46,11 +46,15 @@
         </v-card>
     </v-container>
 </template>
-
 <script>
 import Swal from 'sweetalert2';
 import { mapGetters } from 'vuex';
 import axios from 'axios';
+import store from "@/store";
+
+const getConfig = () => ({
+    headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
+});
 
 export default {
     data() {
@@ -86,25 +90,21 @@ export default {
     methods: {
         async fetchEspecialidades() {
             try {
-                const response = await axios.get(`${this.getApiUrl}/especialidades`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`,
-                    },
-                });
+                const response = await axios.get(`${this.getApiUrl}/especialidades`, getConfig());
                 this.especialidades = response.data;
             } catch (error) {
                 console.error('Error al obtener las especialidades:', error);
             }
         },
         async saveEspecialidad() {
-            if (this.$refs.form.validate()) { // Valida el formulario
+            if (this.$refs.form.validate()) {
                 try {
                     if (this.isEditing) {
-                        await axios.put(`${this.getApiUrl}/especialidades/${this.especialidad.id}`, this.especialidad, {
-                            headers: {
-                                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                            },
-                        });
+                        await axios.put(
+                            `${this.getApiUrl}/especialidades/${this.especialidad.id}`,
+                            this.especialidad,
+                            getConfig()
+                        );
                         Swal.fire({
                             title: 'Especialidad Actualizada',
                             icon: 'success',
@@ -112,11 +112,11 @@ export default {
                             showConfirmButton: false,
                         });
                     } else {
-                        await axios.post(`${this.getApiUrl}/especialidades`, this.especialidad, {
-                            headers: {
-                                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                            },
-                        });
+                        await axios.post(
+                            `${this.getApiUrl}/especialidades`,
+                            this.especialidad,
+                            getConfig()
+                        );
                         Swal.fire({
                             title: 'Especialidad Agregada',
                             icon: 'success',
@@ -143,11 +143,10 @@ export default {
         },
         async deleteEspecialidad(id) {
             try {
-                await axios.delete(`${this.getApiUrl}/especialidades/${id}`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`,
-                    },
-                });
+                await axios.delete(
+                    `${this.getApiUrl}/especialidades/${id}`,
+                    getConfig()
+                );
                 Swal.fire({
                     title: 'Especialidad Eliminada',
                     icon: 'success',

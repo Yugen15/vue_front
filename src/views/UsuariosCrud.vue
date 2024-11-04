@@ -119,7 +119,7 @@ export default {
     methods: {
         matchPassword(value) {
             return value === this.user.password || 'Las contraseñas no coinciden';
-        },
+        },          
         // Obtener usuarios desde el servidor
         async fetchUsers() {
             try {

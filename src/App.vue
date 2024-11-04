@@ -1,8 +1,8 @@
 <template>
-    <v-app>
-        <v-navigation-drawer v-model="drawer" app :mini-variant="mini" class="drawer-background" :expand-on-hover="mini"
+    <v-app >
+        <v-navigation-drawer v-model="drawer" v-if="$store.getters.getUsuario" app :mini-variant="mini" class="drawer-background" :expand-on-hover="mini"
             width="280" dark>
-            <v-list-item class="logo-container px-2">
+            <v-list-item class="logo-container px-2" > 
                 <v-img class="rounded-avatar">
                     <v-img src="@/assets/logo.png" alt="Medisphere Logo" />
                 </v-img>
@@ -10,7 +10,7 @@
 
             <v-divider class="mb-2"></v-divider>
 
-            <v-list nav dense>
+            <v-list nav dense v-if="$store.getters.getUsuario">
                 <v-list-item-group v-model="selectedItem" color="light-blue accent-3">
                     <v-list-item v-for="(item) in menuItems" :key="item.title" :to="item.to" link
                         class="mb-1 rounded-lg">
@@ -20,7 +20,7 @@
                         </v-list-item-content>
                     </v-list-item>
 
-                    <v-list-group :value="false" color="white" prepend-icon="mdi-account-cog">
+                    <v-list-group :value="false" color="white" prepend-icon="mdi-account-cog" >
                         <v-list-item v-for="(item, i) in userOptions" :key="i" :to="item.to" link
                             class="rounded-lg ml-4">
                             <v-list-item-icon>
@@ -46,7 +46,7 @@
             </template>
         </v-navigation-drawer>
 
-        <v-app-bar app color="white" elevation="1" class="app-bar">
+        <v-app-bar app color="white" elevation="1" class="app-bar" v-if="$store.getters.getUsuario">
             <v-app-bar-nav-icon @click.stop="drawer = !drawer" color="primary"></v-app-bar-nav-icon>
             <v-toolbar-title class="text-h6 font-weight-bold primary--text d-none d-sm-flex">
                 {{ getCurrentPageTitle }}
@@ -109,10 +109,9 @@
     </v-app>
 </template>
 <script>
-import axios from 'axios';
-import { useStore } from 'vuex'; // Importamos el store
 
 export default {
+    name: 'App',
     data: () => ({
         drawer: true,
         mini: false,
@@ -136,47 +135,26 @@ export default {
             lastName: 'Pérez',
         },
     }),
-    computed: {
-        getCurrentPageTitle() {
-            const currentRoute = this.$route.path;
-            const menuItem = this.menuItems.find(item => item.to === currentRoute);
-            return menuItem ? menuItem.title : 'Medisphere';
-        },
-        userInitials() {
-            return `${this.user.firstName[0]}${this.user.lastName[0]}`;
-        },
-        isAuthenticated() {
-      return !!localStorage.getItem('token'); // Check if the token exists
-    },
-    },
+
     methods: {
-        async logout() {
-            try {
-                const store = useStore(); // Accedemos al store de Vuex
-                const token = localStorage.getItem('token');
-
-                // Obtenemos la URL de la API desde Vuex
-                const apiUrl = store.getters.getApiUrl;
-
-                // Realizamos la petición de logout
-                await axios.post(`${apiUrl}/logout`, {}, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-
-                // Eliminar el token de localStorage
-                localStorage.removeItem('token');
-                delete axios.defaults.headers.common['Authorization'];
-
-                // Redirigir al login o home después de cerrar sesión
-                this.$router.push('/');
-            } catch (error) {
-                console.error('Error during logout:', error);
-            }
-
+        logout() {
+            this.$store.dispatch('logout');
+            this.$router.push('/');
         },
+        // Verificación de sesión de usuario
+        validarAcceso() {
+            let datos = localStorage.getItem('userData');
+            if (datos) {
+                this.$store.dispatch('/login', JSON.parse(datos));
+                this.$router.push('/');
+            } else {
+                this.$router.push('/');
+            }
+        }
     },
+    created(){
+        this.validarAcceso();
+    }
 };
 </script>
 
@@ -248,7 +226,3 @@ export default {
     /* Cambia el tamaño según lo necesites */
 }
 </style>
-
-
-
-
