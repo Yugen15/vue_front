@@ -57,6 +57,11 @@
                         <v-icon color="red">mdi-delete</v-icon>
                     </v-btn>
                 </template>
+                <template v-slot:[`item.reporte`]="{ item }">
+                    <v-btn icon @click="imprimirReporte(item.id)">
+                        <v-icon color="primary">mdi-printer</v-icon>
+                    </v-btn>
+                </template>
             </v-data-table>
         </v-card>
     </v-container>
@@ -85,7 +90,8 @@ export default {
                 { text: "Apellido", value: "apellido" },
                 { text: "DUI", value: "dui" },
                 { text: "Fecha Nacimiento", value: "fecha_nacimiento" },
-                { text: "Acciones", value: "actions", sortable: false }
+                { text: "Acciones", value: "actions", sortable: false },
+                { text: "Reporte", value: "reporte", sortable: false }
             ],
             rules: {
                 requerido: (v) => !!v || "Este campo es requerido",
@@ -195,6 +201,9 @@ export default {
                     console.log("Error al eliminar paciente:", error);
                     Swal.fire("Error", "No se pudo eliminar el paciente", "error");
                 });
+        },
+        imprimirReporte(id) {
+            window.open(`${this.getApiUrl}/paciente/reporte/${id}`, '_blank', getConfig());
         },
 
         cancelarEdicion() {

@@ -129,7 +129,17 @@
 
           <!-- Formulario para nueva receta -->
           <form @submit.prevent="saveReceta" class="receta-form">
-            <h3>{{ editingReceta ? 'Editar Receta' : 'Nueva Receta' }}</h3>
+            <div class="form-header">
+              <h3>{{ editingReceta ? 'Editar Receta' : 'Nueva Receta' }}</h3>
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" @click="imprimirRecetas"
+                  title="Imprimir historial de recetas">
+                  <v-icon small>mdi-printer</v-icon>
+                  Imprimir Recetas
+                </button>
+              </div>
+            </div>
+
             <div class="form-group">
               <label for="medicamento">Medicamento:</label>
               <input id="medicamento" v-model="recetaForm.medicamento" type="text" class="form-control" required />
@@ -272,9 +282,12 @@ import axios from 'axios';
 import Swal from 'sweetalert2'
 import store from '@/store';
 
+
+
 const getConfig = () => ({
   headers: { 'Authorization': 'Bearer ' + store.getters.getToken }
 });
+
 
 export default {
   name: 'ConsultasView',
@@ -461,6 +474,35 @@ export default {
     },
 
     // RECETAS
+    async imprimirRecetas() {
+      try {
+        if (!this.selectedConsulta?.paciente_id) {
+          throw new Error('No se puede identificar al paciente');
+        }
+
+        // Generar y descargar el PDF
+        const response = await axios.get(
+          `http://localhost:8000/api/receta/reporte/${this.selectedConsulta.paciente_id}`,
+          {
+            responseType: 'blob' // Importante para recibir el PDF
+          }
+        );
+
+        // Crear un objeto URL para el blob
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `recetas_${this.selectedConsulta.paciente_nombre}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error al imprimir las recetas:', error);
+        this.showErrorAlert('Error al generar el PDF de recetas');
+      }
+    },
+
     async fetchRecetas(consultaId) {
       try {
         const response = await axios.get(
