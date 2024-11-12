@@ -56,9 +56,6 @@
               <v-btn icon small class="action-btn" @click="editConsulta(consulta)" title="Editar">
                 <v-icon color="warning">mdi-pencil</v-icon>
               </v-btn>
-              <v-btn icon small class="action-btn" @click="deleteConsulta(consulta.consulta_id)" title="Eliminar">
-                <v-icon color="error">mdi-delete</v-icon>
-              </v-btn>
               <v-btn icon small class="action-btn" @click="openRecetasModal(consulta)" title="Recetas">
                 <v-icon color="primary">mdi-prescription</v-icon>
               </v-btn>
@@ -107,7 +104,7 @@
     <div class="modal-overlay" v-if="showRecetasModal" @click.self="closeRecetasModal">
       <div class="modal-container">
         <div class="modal-header">
-          <h2 class="modal-title">Recetas para {{ selectedConsulta?.paciente_nombre }}</h2>
+          <h2 class="modal-title">Receta para {{ selectedConsulta?.paciente_nombre }}</h2>
           <button class="modal-close" @click="closeRecetasModal" title="Cerrar">&times;</button>
         </div>
         <div class="modal-body">
@@ -129,16 +126,13 @@
 
           <!-- Formulario para nueva receta -->
           <form @submit.prevent="saveReceta" class="receta-form">
-            <div class="form-header">
-              <h3>{{ editingReceta ? 'Editar Receta' : 'Nueva Receta' }}</h3>
-              <div class="form-actions">
-                <button type="button" class="btn btn-secondary" @click="imprimirRecetas"
-                  title="Imprimir historial de recetas">
-                  <v-icon small>mdi-printer</v-icon>
-                  Imprimir Recetas
-                </button>
-              </div>
-            </div>
+
+            <button class="btn btn-secondary download-btn" @click="downloadRecetasReport" :disabled="!selectedConsulta"
+              title="Descargar historial de recetas">
+              <v-icon small>mdi-printer</v-icon>
+              Descargar Receta
+            </button>
+
 
             <div class="form-group">
               <label for="medicamento">Medicamento:</label>
@@ -153,14 +147,14 @@
                 Cancelar
               </button>
               <button type="submit" class="btn btn-primary">
-                {{ editingReceta ? 'Actualizar' : 'Agregar' }} Receta
+                {{ editingReceta ? 'Actualizar' : 'Agregar' }} Medicamento
               </button>
             </div>
           </form>
 
           <!-- Lista de recetas -->
           <div class="recetas-list">
-            <h3>Recetas Existentes</h3>
+            <h3>Receta para esta consulta</h3>
             <div v-if="recetas.length === 0" class="no-recetas">
               No hay recetas registradas para esta consulta.
             </div>
@@ -171,6 +165,7 @@
                     <th>Medicamento</th>
                     <th>Dosis</th>
                     <th>Acciones</th>
+
                   </tr>
                 </thead>
                 <tbody>
@@ -241,7 +236,7 @@
 
           <!-- Lista de exámenes -->
           <div class="examenes-list">
-            <h3>Exámenes Existentes</h3>
+            <h3>Exámenes de consulta</h3>
             <div v-if="examenes.length === 0" class="no-examenes">
               No hay exámenes registrados para esta consulta.
             </div>
@@ -265,6 +260,9 @@
                       <button class="btn-icon" @click="deleteExamen(examen.id)" title="Eliminar">
                         <v-icon small color="error">mdi-delete</v-icon>
                       </button>
+                      <button class="btn-icon" @click="downloadExamenReport(examen.id)" title="Descargar Reporte">
+                        <v-icon small color="info">mdi-printer</v-icon>
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -277,6 +275,7 @@
   </div>
 </template>
 
+import { } from 'module';
 <script>
 import axios from 'axios';
 import Swal from 'sweetalert2'
@@ -474,32 +473,29 @@ export default {
     },
 
     // RECETAS
-    async imprimirRecetas() {
-      try {
-        if (!this.selectedConsulta?.paciente_id) {
-          throw new Error('No se puede identificar al paciente');
-        }
 
-        // Generar y descargar el PDF
+    async downloadRecetasReport() {
+      try {
         const response = await axios.get(
-          `http://localhost:8000/api/receta/reporte/${this.selectedConsulta.paciente_id}`,
+          `http://localhost:8000/api/recetas/reporte/${this.selectedConsulta.consulta_id}`,
           {
-            responseType: 'blob' // Importante para recibir el PDF
+            responseType: 'blob'
           }
         );
 
-        // Crear un objeto URL para el blob
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `recetas_${this.selectedConsulta.paciente_nombre}.pdf`);
+        link.download = `recetas-${this.selectedConsulta.paciente_nombre}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+
       } catch (error) {
-        console.error('Error al imprimir las recetas:', error);
-        this.showErrorAlert('Error al generar el PDF de recetas');
+        console.error('Error al descargar el reporte:', error);
+        this.showErrorAlert('Esta consulta no tiene receta asignada');
       }
     },
 
@@ -627,6 +623,31 @@ export default {
     },
 
     // EXÁMENES
+
+    async downloadExamenReport(id) {
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/examenes/reporte/${id}`,
+          {
+            responseType: 'blob'
+          }
+        );
+
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `examen-${this.selectedConsulta.paciente_nombre}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+      } catch (error) {
+        console.error('Error al descargar el reporte:', error);
+        this.showErrorAlert('Error al generar el reporte del examen');
+      }
+    },
     async fetchExamenes(consultaId) {
       try {
         const response = await axios.get(
@@ -1048,5 +1069,28 @@ export default {
 
 .btn-icon:hover {
   opacity: 0.7;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.download-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.download-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
 }
 </style>

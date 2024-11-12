@@ -1,9 +1,10 @@
 <template>
     <v-container>
-        <!-- Card para el formulario de médicos -->
+        <!-- Botón de navegación a especialidades -->
         <v-btn color="primary" @click="$router.push('/especialidad')">Gestión de Especialidades</v-btn>
 
-        <v-card class="pa-4">
+        <!-- Formulario para agregar o modificar médicos -->
+        <v-card class="pa-4 mt-4">
             <v-card-title>
                 <h1>Médicos</h1>
                 <v-spacer></v-spacer>
@@ -12,26 +13,24 @@
             <v-card-text>
                 <v-form @submit.prevent="agregarMedico">
                     <v-row>
-                        <!-- Nombre del médico -->
+                        <!-- Campos de nombre y apellido del médico -->
                         <v-col cols="12" md="6">
                             <v-text-field v-model="medico.nombre" label="Nombre del médico" outlined dense
                                 required></v-text-field>
                         </v-col>
-
-                        <!-- Apellido del médico -->
                         <v-col cols="12" md="6">
                             <v-text-field v-model="medico.apellido" label="Apellido del médico" outlined dense
                                 required></v-text-field>
                         </v-col>
 
-                        <!-- Especialidad -->
+                        <!-- Campo de especialidad -->
                         <v-col cols="12" md="6">
                             <v-select color="indigo" label="Especialidad" :items="especialidades" item-value="id"
                                 item-title="name" v-model="medico.id_especialidad" outlined dense required></v-select>
                         </v-col>
                     </v-row>
 
-                    <!-- Botones de acciones -->
+                    <!-- Botones de acciones para agregar, modificar, o cancelar -->
                     <v-row>
                         <v-col cols="12" class="text-right">
                             <v-btn v-if="!medico.id" color="success" type="submit" class="mr-2">Agregar</v-btn>
@@ -44,28 +43,48 @@
             </v-card-text>
         </v-card>
 
-        <!-- Card para la tabla de médicos -->
+        <!-- Tabla para listar los médicos -->
         <v-card class="mt-4">
             <v-card-title>
                 <h2>Lista de Médicos</h2>
                 <v-spacer></v-spacer>
                 <v-text-field v-model="busqueda" label="Buscar médicos" outlined dense></v-text-field>
             </v-card-title>
-
-            <v-data-table :headers="headers" :items="filtrarMedicos" item-key="id" class="elevation-1" dense>
-                <template v-slot:[`item.actions`]="{ item }">
-                    <v-btn icon @click="editarMedico(item)">
-                        <v-icon color="warning">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn icon @click="eliminarMedico(item)">
-                        <v-icon color="red">mdi-delete</v-icon>
-                    </v-btn>
-                </template>
-            </v-data-table>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th v-for="header in headers" :key="header.value">{{ header.text }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="body-container">
+                        <tr v-for="medico in filtrarMedicos" :key="medico.id">
+                            <td>{{ medico.id }}</td>
+                            <td>{{ medico.nombre }}</td>
+                            <td>{{ medico.apellido }}</td>
+                            <td>{{ medico.id_especialidad }}</td>
+                            <td>
+                                <v-btn icon @click="editarMedico(medico)">
+                                    <v-icon color="warning">mdi-pencil</v-icon>
+                                </v-btn>
+                                <v-btn icon @click="eliminarMedico(medico)">
+                                    <!-- Changed from confirmarMedico to eliminarMedico -->
+                                    <v-icon color="red">mdi-delete</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>
+                                <v-btn icon @click="descargarHistorialConsultas(medico)">
+                                    <v-icon color="primary">mdi-printer</v-icon>
+                                </v-btn>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </v-card>
     </v-container>
 
-    <!-- Alerta para mostrar mensajes -->
+    <!-- Alerta de notificación -->
     <v-snackbar v-model="alertaEstado" color="blue-accent-1" timeout="2000">
         {{ mensaje }}
     </v-snackbar>
@@ -97,8 +116,9 @@ export default {
                 { text: "Nombre", value: "nombre" },
                 { text: "Apellido", value: "apellido" },
                 { text: "Especialidad", value: "especialidad" },
-                { text: "Acciones", value: "actions", sortable: false }
-            ]
+                { text: "Acciones", value: "actions", sortable: false },
+                { text: "Historial Consultas", value: "historial", sortable: false } // Nueva columna
+            ],
         };
     },
     computed: {
@@ -275,6 +295,47 @@ export default {
                 console.log("Error al eliminar médico: " + error);
             }
         },
+        // Para el pddf
+        async descargarHistorialConsultas(item) {
+            try {
+                const response = await axios.get(
+                    `${this.getApiUrl}/consultas/medico/pdf/${item.id}`,
+                    {
+                        responseType: 'json'
+                    }
+                );
+
+                if (response.data.code === 200) {
+                    // Crear blob desde el PDF en base64
+                    const pdfContent = atob(response.data.pdf);
+                    const byteArray = new Uint8Array(pdfContent.length);
+                    for (let i = 0; i < pdfContent.length; i++) {
+                        byteArray[i] = pdfContent.charCodeAt(i);
+                    }
+                    const blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
+
+                    // Crear URL y descargar
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `historial-consultas-${item.nombre}-${item.apellido}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+
+                    this.mensaje = "PDF descargado correctamente";
+                    this.alertaEstado = true;
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo descargar el historial de consultas'
+                });
+                console.error("Error al descargar historial:", error);
+            }
+        },
 
         async cancelarEdicion() {
             const result = await Swal.fire({
@@ -293,6 +354,8 @@ export default {
             }
         }
     },
+
+
     created() {
         this.obtenerEspecialidades();
         this.obtenerMedicos();
@@ -312,5 +375,29 @@ h2 {
 
 .v-btn {
     margin-right: 8px;
+}
+
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.body-container {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table td {
+    text-align: center;
+    /* Centra el contenido horizontalmente */
+    vertical-align: middle;
+    /* Centra el contenido verticalmente */
 }
 </style>

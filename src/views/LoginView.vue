@@ -9,7 +9,7 @@
                             <h2 class="headline font-weight-bold text-primary">Medisphere</h2>
                             <p class="subheading text-secondary">Inicio de sesión</p>
                             <v-form @submit.prevent="login">
-                                <v-text-field label="Correo" placeholder="correo@ventaxperto.com" counter maxlength="70"
+                                <v-text-field label="Correo" placeholder="Dirección de Correo" counter maxlength="70"
                                     color="primary" clearable prepend-inner-icon="mdi-email" v-model="usuario.email"
                                     class="login-input"></v-text-field>
                                 <v-text-field label="Contraseña" placeholder="*********" counter maxlength="15"

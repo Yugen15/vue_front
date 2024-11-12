@@ -4,7 +4,10 @@
             class="drawer-background" :expand-on-hover="mini" width="280" dark>
             <v-list-item class="logo-container px-2">
                 <v-img class="rounded-avatar">
-                    <v-img src="@/assets/logo.png" alt="Medisphere Logo" />
+                    <router-link to="/welcome">
+                        <v-img src="@/assets/logo.png" alt="Medisphere Logo" />
+                    </router-link>
+
                 </v-img>
             </v-list-item>
 

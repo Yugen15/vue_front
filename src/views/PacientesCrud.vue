@@ -47,22 +47,37 @@
                 <v-spacer></v-spacer>
                 <v-text-field v-model="busqueda" label="Buscar pacientes" outlined dense></v-text-field>
             </v-card-title>
-
-            <v-data-table :headers="headers" :items="filtrarPacientes" item-key="id" class="elevation-1" dense>
-                <template v-slot:[`item.actions`]="{ item }">
-                    <v-btn icon @click="editarPaciente(item)">
-                        <v-icon color="warning">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn icon @click="confirmarEliminacion(item)">
-                        <v-icon color="red">mdi-delete</v-icon>
-                    </v-btn>
-                </template>
-                <template v-slot:[`item.reporte`]="{ item }">
-                    <v-btn icon @click="imprimirReporte(item.id)">
-                        <v-icon color="primary">mdi-printer</v-icon>
-                    </v-btn>
-                </template>
-            </v-data-table>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th v-for="header in headers" :key="header.value">{{ header.text }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="body-container">
+                        <tr v-for="paciente in filtrarPacientes" :key="paciente.id">
+                            <td>{{ paciente.id }}</td>
+                            <td>{{ paciente.nombre }}</td>
+                            <td>{{ paciente.apellido }}</td>
+                            <td>{{ paciente.dui }}</td>
+                            <td>{{ paciente.fecha_nacimiento }}</td>
+                            <td>
+                                <v-btn icon @click="editarPaciente(paciente)">
+                                    <v-icon color="warning">mdi-pencil</v-icon>
+                                </v-btn>
+                                <v-btn icon @click="confirmarEliminacion(paciente)">
+                                    <v-icon color="red">mdi-delete</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>
+                                <v-btn icon @click="imprimirReporte(paciente.id)">
+                                    <v-icon color="primary">mdi-printer</v-icon>
+                                </v-btn>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </v-card>
     </v-container>
 </template>
@@ -91,7 +106,7 @@ export default {
                 { text: "DUI", value: "dui" },
                 { text: "Fecha Nacimiento", value: "fecha_nacimiento" },
                 { text: "Acciones", value: "actions", sortable: false },
-                { text: "Reporte", value: "reporte", sortable: false }
+                { text: "Expediente", value: "reporte", sortable: false }
             ],
             rules: {
                 requerido: (v) => !!v || "Este campo es requerido",
@@ -229,5 +244,26 @@ h2 {
 
 .v-btn {
     margin-right: 8px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.body-container {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table td {
+    text-align: center; /* Centra el contenido horizontalmente */
+    vertical-align: middle; /* Centra el contenido verticalmente */
 }
 </style>
