@@ -68,8 +68,7 @@
                                     <v-icon color="warning">mdi-pencil</v-icon>
                                 </v-btn>
                                 <v-btn icon @click="eliminarMedico(medico)">
-                                    <!-- Changed from confirmarMedico to eliminarMedico -->
-                                    <v-icon color="red">mdi-delete</v-icon>
+                                    <v-icon color="error">mdi-delete</v-icon>
                                 </v-btn>
                             </td>
                             <td>
