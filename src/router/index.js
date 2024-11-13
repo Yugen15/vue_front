@@ -7,6 +7,7 @@ import Citas from '@/views/CitasCrud.vue'
 import Consultas from '@/views/ConsultasCrud.vue'
 import LoginView from '@/views/LoginView.vue'
 import WelcomeView from '@/views/WelcomeView.vue'
+import RolesView from '@/views/RolesCrud.vue'
 
 const routes = [
 
@@ -14,6 +15,11 @@ const routes = [
     path: '/',
     name: 'login',
     component: LoginView
+  },
+  {
+    path: '/roles',
+    name: 'roles',
+    component: RolesView
   },
   {
     path: '/welcome',
